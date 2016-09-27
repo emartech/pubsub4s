@@ -18,7 +18,5 @@ lazy val root = (project in file(".")).
       "com.google.apis" % "google-api-services-pubsub" % "v1-rev11-1.22.0",
       "org.scalactic" %% "scalactic" % "2.2.6",
       "org.scalatest" %% "scalatest" % "2.2.6" % "test"
-    ),
-    bintrayRepository := "common",
-    bintrayOrganization := Some("fullstackanalytics")
+    )
   )

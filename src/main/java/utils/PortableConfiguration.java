@@ -19,19 +19,17 @@ import java.io.IOException;
 public class PortableConfiguration {
 
     // Default factory method.
-    public static Pubsub.Builder createPubsubClient() throws IOException {
+    public static Pubsub.Builder createPubsubClient(GoogleCredential credential) throws IOException {
         return createPubsubClient(Utils.getDefaultTransport(),
-                Utils.getDefaultJsonFactory());
+                Utils.getDefaultJsonFactory(), credential);
     }
 
     // A factory method that allows you to use your own HttpTransport
     // and JsonFactory.
     public static Pubsub.Builder createPubsubClient(HttpTransport httpTransport,
-            JsonFactory jsonFactory) throws IOException {
+            JsonFactory jsonFactory, GoogleCredential credential) throws IOException {
         Preconditions.checkNotNull(httpTransport);
         Preconditions.checkNotNull(jsonFactory);
-        GoogleCredential credential = GoogleCredential.getApplicationDefault(
-                httpTransport, jsonFactory);
         // In some cases, you need to add the scope explicitly.
         if (credential.createScopedRequired()) {
             credential = credential.createScoped(PubsubScopes.all());

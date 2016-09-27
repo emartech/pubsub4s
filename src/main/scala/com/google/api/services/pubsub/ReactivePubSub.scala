@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.NotUsed
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl._
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.services.pubsub.model.ListSubscriptionsResponse
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.services.pubsub.PublishResponse.MessageId
@@ -154,11 +155,11 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
 
 object ReactivePubsub {
 
-  def apply(appName:String): ReactivePubsub = apply(appName, None)
+  def apply(appName:String, credential: GoogleCredential): ReactivePubsub = apply(appName, credential, None)
 
-  def apply(appName: String, url: Option[String]): ReactivePubsub = {
+  def apply(appName: String, credential: GoogleCredential, url: Option[String]): ReactivePubsub = {
 
-    val p: Pubsub.Builder = PortableConfiguration.createPubsubClient()
+    val p: Pubsub.Builder = PortableConfiguration.createPubsubClient(credential)
       .setApplicationName(appName)
 
     url match { case Some(u) => p.setRootUrl(u); case _ => () }
