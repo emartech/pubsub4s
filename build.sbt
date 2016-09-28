@@ -20,3 +20,5 @@ lazy val root = (project in file(".")).
       "org.scalatest" %% "scalatest" % "2.2.6" % "test"
     )
   )
+
+publishTo := Some(Resolver.file("releases", new File("releases")))
