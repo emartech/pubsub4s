@@ -20,19 +20,19 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
 
   def subscribe
       (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem): Source[Seq[ReceivedMessage], NotUsed] =
+      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Seq[ReceivedMessage], NotUsed] =
     asyncRequestToSource(() => pullAsync(project, subscription, pullRequest))
 
   def subscribeConcat
       (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem): Source[ReceivedMessage, NotUsed] =
+      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[ReceivedMessage, NotUsed] =
     asyncRequestToSource(() => pullAsync(project, subscription, pullRequest)).mapConcat{ seq => seq }
 
   def subscribeFromStream
       (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, s: ActorSystem): Source[Future[List[ReceivedMessage]], NotUsed] = {
+      (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Future[List[ReceivedMessage]], NotUsed] = {
 
-    def iter(): Stream[Future[List[ReceivedMessage]]] =
+    def iter()(implicit log: LoggingAdapter): Stream[Future[List[ReceivedMessage]]] =
       pullAsync(project, subscription, pullRequest) #:: iter()
 
     val res = iter().toIterator
@@ -43,7 +43,7 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
   // use a thread pool for these blocking requests.
   def pullAsync
       (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, s: ActorSystem): Future[List[ReceivedMessage]] =
+      (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Future[List[ReceivedMessage]] =
     Future {
       blocking {
         pull(project, subscription, pullRequest)
@@ -52,7 +52,7 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
 
   def pullAsyncWithRetries
       (retries: Int)(project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, system: ActorSystem) =
+      (implicit ec: ExecutionContext, system: ActorSystem, log: LoggingAdapter) =
     retry({() => pullAsync(project, subscription, pullRequest)}, retries)
 
   def pullSync(project: String, subscription: String, pullRequest: PullRequest): Try[List[ReceivedMessage]] = Try {
@@ -73,13 +73,16 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     loop(numRetries)
   }
 
-  private def pull(project: String, subscription: String, pullRequest: PullRequest): List[ReceivedMessage] =
+  private def pull(project: String, subscription: String, pullRequest: PullRequest)(implicit log: LoggingAdapter): List[ReceivedMessage] =
     try {
       PullResponse(
         javaPubsub.projects().subscriptions
           .pull(fqrn("subscriptions", project, subscription), pullRequest).execute())
     } catch {
-      case e: Throwable => List.empty[ReceivedMessage]
+      case e: Throwable => {
+        log.error("error occurred during pull request, message: {}", e.getMessage)
+        List.empty[ReceivedMessage]
+      }
     }
 
 
