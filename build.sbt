@@ -1,6 +1,6 @@
 lazy val commonSettings = Seq(
   organization := "io.fullstackanalytics",
-  version := "0.1.8",
+  version := "0.2.0",
   scalaVersion := "2.12.10"
 )
 
