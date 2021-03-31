@@ -13,37 +13,38 @@ import utils.PortableConfiguration
 import scala.concurrent._
 import scala.util.{Failure, Success, Try}
 import scala.language.implicitConversions._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
+
   import ReactivePubsub.{fqrn, ignoreAlreadyExists}
 
   def subscribe
-      (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Seq[ReceivedMessage], NotUsed] =
+  (project: String, subscription: String, pullRequest: PullRequest)
+  (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Seq[ReceivedMessage], NotUsed] =
     asyncRequestToSource(() => pullAsync(project, subscription, pullRequest))
 
   def subscribeConcat
-      (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[ReceivedMessage, NotUsed] =
-    asyncRequestToSource(() => pullAsync(project, subscription, pullRequest)).mapConcat{ seq => seq }
+  (project: String, subscription: String, pullRequest: PullRequest)
+  (implicit blockingExecutionContext: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[ReceivedMessage, NotUsed] =
+    asyncRequestToSource(() => pullAsync(project, subscription, pullRequest)).mapConcat { seq => seq }
 
   def subscribeFromStream
-      (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Future[List[ReceivedMessage]], NotUsed] = {
+  (project: String, subscription: String, pullRequest: PullRequest)
+  (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Source[Future[List[ReceivedMessage]], NotUsed] = {
 
-    def iter()(implicit log: LoggingAdapter): Stream[Future[List[ReceivedMessage]]] =
+    def iter()(implicit log: LoggingAdapter): LazyList[Future[List[ReceivedMessage]]] =
       pullAsync(project, subscription, pullRequest) #:: iter()
 
-    val res = iter().toIterator
+    val res = iter().iterator
     Source.fromIterator(() => res)
   }
 
   // allocate additional logical thread for execution context.
   // use a thread pool for these blocking requests.
   def pullAsync
-      (project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Future[List[ReceivedMessage]] =
+  (project: String, subscription: String, pullRequest: PullRequest)
+  (implicit ec: ExecutionContext, s: ActorSystem, log: LoggingAdapter): Future[List[ReceivedMessage]] =
     Future {
       blocking {
         pull(project, subscription, pullRequest)
@@ -51,9 +52,9 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     }
 
   def pullAsyncWithRetries
-      (retries: Int)(project: String, subscription: String, pullRequest: PullRequest)
-      (implicit ec: ExecutionContext, system: ActorSystem, log: LoggingAdapter) =
-    retry({() => pullAsync(project, subscription, pullRequest)}, retries)
+  (retries: Int)(project: String, subscription: String, pullRequest: PullRequest)
+  (implicit ec: ExecutionContext, system: ActorSystem, log: LoggingAdapter) =
+    retry({ () => pullAsync(project, subscription, pullRequest) }, retries)
 
   def pullSync(project: String, subscription: String, pullRequest: PullRequest): Try[List[ReceivedMessage]] = Try {
     PullResponse(
@@ -61,11 +62,12 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
         .pull(fqrn("subscriptions", project, subscription), pullRequest).execute())
   }
 
-  def pullSyncWithRetries(numRetries: Int) (project: String, subscription: String, pullRequest: PullRequest) = {
+  def pullSyncWithRetries(numRetries: Int)(project: String, subscription: String, pullRequest: PullRequest) = {
 
     def loop(count: Int): Try[List[ReceivedMessage]] = {
-      val result = pullSync(project, subscription, pullRequest); result match {
-        case Failure(_) if count>0 => loop(count-1)
+      val result = pullSync(project, subscription, pullRequest);
+      result match {
+        case Failure(_) if count > 0 => loop(count - 1)
         case _ => result
       }
     }
@@ -91,15 +93,15 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
 
     val request: Req = javaPubsub.projects().subscriptions().list(s"projects/${project}")
 
-    def iter(r: Req): Stream[ListSubscriptionsResponse] = {
+    def iter(r: Req): LazyList[ListSubscriptionsResponse] = {
       val result = r.execute()
       if (result.getSubscriptions != null) {
         val nextToken = r.getPageToken
         if (nextToken != null)
           result #:: iter(r.setPageToken(nextToken))
         else
-          Stream(result)
-      } else Stream.empty
+          LazyList(result)
+      } else LazyList.empty
     }
 
     iter(request)
@@ -119,8 +121,8 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     createSubscription(project, subscription, topic, ackDeadlineSeconds) recover ignoreAlreadyExists
 
   def ack
-      (project: String, subscription: String) (ackIds: List[String])
-      (implicit ec: ExecutionContext, s: ActorSystem) =
+  (project: String, subscription: String)(ackIds: List[String])
+  (implicit ec: ExecutionContext, s: ActorSystem) =
     Future {
       blocking {
         javaPubsub.projects().subscriptions()
@@ -143,14 +145,14 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     Future(messages map converter) flatMap (publish(project, topic, _))
 
   def publish
-      (project: String, topic: String, messages: Seq[PubsubMessage])
-      (implicit ec: ExecutionContext, log: LoggingAdapter): Future[List[MessageId]] =
+  (project: String, topic: String, messages: Seq[PubsubMessage])
+  (implicit ec: ExecutionContext, log: LoggingAdapter): Future[List[MessageId]] =
     PublishRequest(messages) match {
       case Success(m) => Future {
         blocking {
           PublishResponse(javaPubsub.projects().topics().publish(fqrn("topics", project, topic), m).execute())
         }
-      } recover { case e : GoogleJsonResponseException => log.error(e, s"the request was ${m.toString}"); throw e }
+      } recover { case e: GoogleJsonResponseException => log.error(e, s"the request was ${m.toString}"); throw e }
       case Failure(e) => Future.failed(e)
     }
 
@@ -158,21 +160,25 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
 
 object ReactivePubsub {
 
-  def apply(appName:String, credential: GoogleCredential): ReactivePubsub = apply(appName, credential, None)
+  def apply(appName: String, credential: GoogleCredential): ReactivePubsub = apply(appName, credential, None)
 
   def apply(appName: String, credential: GoogleCredential, url: Option[String]): ReactivePubsub = {
 
     val p: Pubsub.Builder = PortableConfiguration.createPubsubClient(credential)
       .setApplicationName(appName)
 
-    url match { case Some(u) => p.setRootUrl(u); case _ => () }
+    url match {
+      case Some(u) => p.setRootUrl(u);
+      case _ => ()
+    }
 
     new ReactivePubsub(p.build())
   }
 
-  def fqrn(resourceType:String, project:String, resource:String) = s"projects/${project}/${resourceType}/${resource}"
+  def fqrn(resourceType: String, project: String, resource: String) = s"projects/${project}/${resourceType}/${resource}"
 
-  val ignoreAlreadyExists : PartialFunction[Throwable,_] =
-    { case e: GoogleJsonResponseException if e.getDetails.getCode == 409 => () }
+  val ignoreAlreadyExists: PartialFunction[Throwable, _] = {
+    case e: GoogleJsonResponseException if e.getDetails.getCode == 409 => ()
+  }
 
 }

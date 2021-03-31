@@ -1,6 +1,6 @@
 package com.google.api.services.pubsub
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import model.{PubsubMessage => javaPubsubMessage}
 
 import scala.collection.mutable.{Map => MMap}

@@ -1,6 +1,6 @@
 package com.google.api.services.pubsub
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 // wrapper type that can be passed to Akka actors and flows and guards against nulls.
 

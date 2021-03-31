@@ -1,6 +1,6 @@
 package com.google.api.services.pubsub
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object PublishResponse {
 

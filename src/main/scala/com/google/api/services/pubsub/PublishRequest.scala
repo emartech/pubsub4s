@@ -1,8 +1,8 @@
 package com.google.api.services.pubsub
 
-import com.google.api.services.pubsub.model.{PublishRequest => javaPublishRequest, PubsubMessage => javaPubsubMessage}
+import com.google.api.services.pubsub.model.{PublishRequest => javaPublishRequest}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util._
 
 object PublishRequest {
