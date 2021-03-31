@@ -2,7 +2,8 @@ lazy val commonSettings = Seq(
   organization := "io.fullstackanalytics",
   version := "0.3.0",
   scalaVersion := "2.13.5",
-  crossScalaVersions := List("2.13.5", "2.12.13")
+  crossScalaVersions := List("2.13.5", "2.12.13"),
+  javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 )
 
 val akkaV = "2.6.13"
