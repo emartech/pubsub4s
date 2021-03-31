@@ -8,7 +8,7 @@ object PullRequest {
 
   implicit def toJava(r: PullRequest): model.PullRequest = {
     new model.PullRequest()
-          .setMaxMessages(r.maxMessages)
-          .setReturnImmediately(r.returnImmediately)
+      .setMaxMessages(r.maxMessages)
+      .setReturnImmediately(r.returnImmediately)
   }
 }

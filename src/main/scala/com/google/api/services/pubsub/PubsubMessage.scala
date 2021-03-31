@@ -1,23 +1,21 @@
 package com.google.api.services.pubsub
 
-import scala.jdk.CollectionConverters._
-import model.{PubsubMessage => javaPubsubMessage}
+import com.google.api.services.pubsub.model.{PubsubMessage => javaPubsubMessage}
 
 import scala.collection.mutable.{Map => MMap}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
-import scala.language.implicitConversions._
 
-
-/**
-  * A message data and its attributes.
+/** A message data and its attributes.
   * The message payload must not be empty; it must contain either a non-empty data field, or at least one attribute.
   *
   * messageId and publishTime are set by pubsub, unless converting from received message.
   */
-final case class PubsubMessage(messageId: Option[String],
-                               data: Option[Array[Byte]],
-                               attributes: Option[MMap[String,String]],
-                               publishTime: Option[String]
+final case class PubsubMessage(
+    messageId: Option[String],
+    data: Option[Array[Byte]],
+    attributes: Option[MMap[String, String]],
+    publishTime: Option[String]
 )
 
 case class InvalidPubsubMesage(err: String) extends Exception

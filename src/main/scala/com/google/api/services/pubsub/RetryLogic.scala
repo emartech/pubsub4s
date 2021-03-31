@@ -13,7 +13,7 @@ trait RetryLogic {
       case _ if retries > 0 => after(2.seconds, using = s.scheduler)(retry(op, retries - 1))
     }
 
-  def retry[A,B](op: A => Future[B], retries: Int)(elem: A)(implicit ec: ExecutionContext, s: ActorSystem): Future[B] =
+  def retry[A, B](op: A => Future[B], retries: Int)(elem: A)(implicit ec: ExecutionContext, s: ActorSystem): Future[B] =
     op(elem) recoverWith {
       case _ if retries > 0 => after(2.seconds, using = s.scheduler)(retry(op, retries - 1)(elem))
     }
