@@ -1,8 +1,11 @@
 lazy val commonSettings = Seq(
   organization := "io.fullstackanalytics",
   version := "0.2.0",
-  scalaVersion := "2.12.10"
+  scalaVersion := "2.13.5",
+  crossScalaVersions := List("2.13.5", "2.12.13")
 )
+
+val akkaV = "2.6.13"
 
 lazy val root = (project in file(".")).
   settings(commonSettings).
@@ -10,12 +13,11 @@ lazy val root = (project in file(".")).
     name := "pubsub4s",
     licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-actor" % "2.5.25",
-      "com.typesafe.akka" %% "akka-slf4j" % "2.5.25",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.25",
-      "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.25",
-      "com.typesafe.akka" %% "akka-testkit" % "2.5.25",
-      "com.google.apis" % "google-api-services-pubsub" % "v1-rev20190826-1.30.1"
+      "com.typesafe.akka" %% "akka-actor" % akkaV,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaV,
+      "com.typesafe.akka" %% "akka-stream" % akkaV,
+      "com.google.apis" % "google-api-services-pubsub" % "v1-rev20190826-1.30.1",
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.4.3"
     )
   )
 

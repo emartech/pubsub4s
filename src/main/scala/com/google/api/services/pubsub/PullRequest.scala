@@ -1,5 +1,7 @@
 package com.google.api.services.pubsub
 
+import scala.language.implicitConversions
+
 final case class PullRequest(maxMessages: Int, returnImmediately: Boolean)
 
 object PullRequest {

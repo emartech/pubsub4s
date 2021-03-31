@@ -26,10 +26,10 @@ object PubsubMessage {
 
   def apply(message: javaPubsubMessage): PubsubMessage =
     PubsubMessage(
-      Option(message.getMessageId()),
+      Option(message.getMessageId),
       Option(message.decodeData()),
-      Option(message.getAttributes()).map(_.asScala),
-      Option(message.getPublishTime())
+      Option(message.getAttributes).map(_.asScala),
+      Option(message.getPublishTime)
     )
 
   def apply(data: Array[Byte]): PubsubMessage = PubsubMessage(None, Some(data), None, None)
@@ -37,7 +37,7 @@ object PubsubMessage {
   def apply(data: Array[Byte], attributes: MMap[String, String]): PubsubMessage =
     PubsubMessage(None, Some(data), Some(attributes), None)
 
-  def isValid(m: PubsubMessage) =
+  def isValid(m: PubsubMessage): Boolean =
     m.data.isDefined || (m.attributes.isDefined && m.attributes.nonEmpty)
 
   def asJava(m: PubsubMessage): Try[javaPubsubMessage] =
