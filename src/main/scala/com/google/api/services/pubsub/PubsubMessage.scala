@@ -46,6 +46,6 @@ object PubsubMessage {
       m.attributes match { case Some(a) => msg.setAttributes(a.asJava); case _ => () }
       m.publishTime match { case Some(t) => msg.setPublishTime(t); case _ => () }
       Success(msg)
-    } else Failure(new InvalidPubsubMesage(""))
+    } else Failure(InvalidPubsubMesage(""))
 
 }

@@ -7,9 +7,10 @@ import akka.stream.scaladsl._
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.services.pubsub.PublishResponse.MessageId
-import com.google.api.services.pubsub.model.ListSubscriptionsResponse
+import com.google.api.services.pubsub.model.{Empty, ListSubscriptionsResponse, Subscription, Topic}
 import utils.PortableConfiguration
 
+import scala.annotation.tailrec
 import scala.concurrent._
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
@@ -62,7 +63,7 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
       ec: ExecutionContext,
       system: ActorSystem,
       log: LoggingAdapter
-  ) =
+  ): Future[List[ReceivedMessage]] =
     retry({ () => pullAsync(project, subscription, pullRequest) }, retries)
 
   def pullSync(project: String, subscription: String, pullRequest: PullRequest): Try[List[ReceivedMessage]] = Try {
@@ -75,10 +76,11 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     )
   }
 
-  def pullSyncWithRetries(numRetries: Int)(project: String, subscription: String, pullRequest: PullRequest) = {
+  def pullSyncWithRetries(numRetries: Int)(project: String, subscription: String, pullRequest: PullRequest): Try[List[ReceivedMessage]] = {
 
+    @tailrec
     def loop(count: Int): Try[List[ReceivedMessage]] = {
-      val result = pullSync(project, subscription, pullRequest);
+      val result = pullSync(project, subscription, pullRequest)
       result match {
         case Failure(_) if count > 0 => loop(count - 1)
         case _                       => result
@@ -100,16 +102,15 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
           .execute()
       )
     } catch {
-      case e: Throwable => {
+      case e: Throwable =>
         log.error("error occurred during pull request, message: {}", e.getMessage)
         List.empty[ReceivedMessage]
-      }
     }
 
-  def getSubscriptions(project: String, subscription: String) = {
+  def getSubscriptions(project: String): LazyList[ListSubscriptionsResponse] = {
     type Req = Pubsub#Projects#Subscriptions#List
 
-    val request: Req = javaPubsub.projects().subscriptions().list(s"projects/${project}")
+    val request: Req = javaPubsub.projects().subscriptions().list(s"projects/$project")
 
     def iter(r: Req): LazyList[ListSubscriptionsResponse] = {
       val result = r.execute()
@@ -125,7 +126,7 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
     iter(request)
   }
 
-  def createSubscription(project: String, subscription: String, topic: String, ackDeadlineSeconds: Int) = Try {
+  def createSubscription(project: String, subscription: String, topic: String, ackDeadlineSeconds: Int): Try[Subscription] = Try {
     javaPubsub
       .projects()
       .subscriptions()
@@ -138,10 +139,10 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
       .execute()
   }
 
-  def createSubscriptionIgnore(project: String, subscription: String, topic: String, ackDeadlineSeconds: Int) =
+  def createSubscriptionIgnore(project: String, subscription: String, topic: String, ackDeadlineSeconds: Int): Try[Any] =
     createSubscription(project, subscription, topic, ackDeadlineSeconds) recover ignoreAlreadyExists
 
-  def ack(project: String, subscription: String)(ackIds: List[String])(implicit ec: ExecutionContext, s: ActorSystem) =
+  def ack(project: String, subscription: String)(ackIds: List[String])(implicit ec: ExecutionContext, s: ActorSystem): Future[Empty] =
     Future {
       blocking {
         javaPubsub
@@ -156,10 +157,10 @@ class ReactivePubsub(val javaPubsub: Pubsub) extends PublisherTrait {
       }
     }
 
-  def createTopic(project: String, topic: String) =
+  def createTopic(project: String, topic: String): Try[Topic] =
     Try(javaPubsub.projects().topics().create(fqrn("topics", project, topic), new model.Topic()).execute())
 
-  def createTopicIgnore(project: String, topic: String) = createTopic(project, topic) recover ignoreAlreadyExists
+  def createTopicIgnore(project: String, topic: String): Try[Any] = createTopic(project, topic) recover ignoreAlreadyExists
 
   def publish[T](project: String, topic: String)(messages: Seq[T], converter: T => PubsubMessage)(implicit
       ec: ExecutionContext,
@@ -201,7 +202,7 @@ object ReactivePubsub {
     new ReactivePubsub(p.build())
   }
 
-  def fqrn(resourceType: String, project: String, resource: String) = s"projects/${project}/${resourceType}/${resource}"
+  def fqrn(resourceType: String, project: String, resource: String) = s"projects/$project/$resourceType/$resource"
 
   val ignoreAlreadyExists: PartialFunction[Throwable, _] = {
     case e: GoogleJsonResponseException if e.getDetails.getCode == 409 => ()

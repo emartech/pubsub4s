@@ -12,7 +12,7 @@ object PublishRequest {
     payload match {
       case Success(pay) =>
         Success(new javaPublishRequest().setMessages(pay.asJava))
-      case _ => Failure(new InvalidPubsubMesage(""))
+      case _ => Failure(InvalidPubsubMesage(""))
     }
   }
 
