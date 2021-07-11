@@ -17,7 +17,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-actor" % akkaV,
       "com.typesafe.akka" %% "akka-slf4j" % akkaV,
       "com.typesafe.akka" %% "akka-stream" % akkaV,
-      "com.google.apis" % "google-api-services-pubsub" % "v1-rev20190826-1.30.1"
+      "com.google.apis" % "google-api-services-pubsub" % "v1-rev20210322-1.32.1"
     )
   )
 
