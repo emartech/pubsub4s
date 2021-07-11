@@ -6,7 +6,7 @@ lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation")
 )
 
-val akkaV = "2.6.13"
+val akkaV = "2.6.15"
 
 lazy val root = (project in file(".")).
   settings(commonSettings).
